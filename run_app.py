@@ -12,6 +12,7 @@ from config.config import (
 )
 from src.database.models import VocabularyEntry
 from src.database.sqlite_repository import SQLiteVocabularyRepository
+from src.utils.vocabulary_utils import parse_vocabulary_response
 
 def create_vocabulary_table():
     entries = st.session_state.vocab_repo.get_entries("user123")
@@ -163,15 +164,54 @@ def main():
                 with st.form("add_vocabulary_modal"):
                     st.subheader("Add New Entry")
                     word_phrase = st.text_input("Word/Phrase")
-                    translation = st.text_input("Translation")
-                    definitions = st.text_area("Definitions (one per line)")
-                    example = st.text_input("Example sentence")
                     
-                    col1, col2 = st.columns(2)
+                    # Store form state in session state
+                    if 'form_data' not in st.session_state:
+                        st.session_state.form_data = {
+                            'translation': '',
+                            'definitions': '',
+                            'example': ''
+                        }
+                    
+                    translation = st.text_input("Translation", value=st.session_state.form_data['translation'])
+                    definitions = st.text_area("Definitions (one per line)", value=st.session_state.form_data['definitions'])
+                    example = st.text_input("Example sentence", value=st.session_state.form_data['example'])
+                    
+                    # All buttons in one row with 3 columns
+                    col1, col2, col3 = st.columns(3)
                     with col1:
-                        submit = st.form_submit_button("Add")
+                        auto_populate = st.form_submit_button("Auto-fill", use_container_width=True)
                     with col2:
-                        cancel = st.form_submit_button("Cancel")
+                        submit = st.form_submit_button("Add", use_container_width=True)
+                    with col3:
+                        cancel = st.form_submit_button("Cancel", use_container_width=True)
+                    
+                    if auto_populate and word_phrase:
+                        try:
+                            with st.spinner("Analyzing word..."):
+                                # Get raw response from OpenAI
+                                response = st.session_state.chat_api.chat(
+                                    word_phrase,
+                                    "system",
+                                    learning_language=st.session_state.learning_language,
+                                    interface_language=st.session_state.interface_language,
+                                    task="Vocabulary Autofill"
+                                )
+                                
+                                # Parse and validate the response
+                                analysis = parse_vocabulary_response(response.content)
+                                
+                                # Update session state with the validated data
+                                st.session_state.form_data = {
+                                    'translation': analysis.translation,
+                                    'definitions': '\n'.join(analysis.definitions),
+                                    'example': analysis.example
+                                }
+                                st.rerun()
+                        except ValueError as e:
+                            st.error(f"Error analyzing word: {str(e)}")
+                        except Exception as e:
+                            st.error(f"Unexpected error: {str(e)}")
                     
                     if submit and word_phrase and translation:
                         entry = VocabularyEntry(
@@ -186,11 +226,23 @@ def main():
                         )
                         st.session_state.vocab_repo.add_entry(entry)
                         st.session_state.show_add_entry_modal = False
+                        # Clear form data
+                        st.session_state.form_data = {
+                            'translation': '',
+                            'definitions': '',
+                            'example': ''
+                        }
                         st.success("Word added successfully!")
                         st.rerun()
                     
                     if cancel:
                         st.session_state.show_add_entry_modal = False
+                        # Clear form data
+                        st.session_state.form_data = {
+                            'translation': '',
+                            'definitions': '',
+                            'example': ''
+                        }
                         st.rerun()
         else:
             create_vocabulary_table()

@@ -11,6 +11,7 @@ from typing_extensions import Annotated, TypedDict
 from typing import Sequence
 from prompts.text_analysis import TEXT_ANALYSIS_PROMPT
 from prompts.general_prompts import DEFAULT_SYSTEM_PROMPT
+from prompts.vocabulary_prompts import VOCABULARY_ANALYSIS_PROMPT
 
 from config.secrets import OPENAI_API_KEY
 
@@ -46,6 +47,10 @@ class OpenAIChatAPI:
             ]),
             "Text Analysis": ChatPromptTemplate.from_messages([
                 ("system", TEXT_ANALYSIS_PROMPT),
+                MessagesPlaceholder(variable_name="messages"),
+            ]),
+            "Vocabulary Autofill": ChatPromptTemplate.from_messages([
+                ("system", VOCABULARY_ANALYSIS_PROMPT),
                 MessagesPlaceholder(variable_name="messages"),
             ])
         }
