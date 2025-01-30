@@ -71,6 +71,8 @@ def main():
         st.session_state.current_task = DEFAULT_CURRENT_TASK
     if 'selected_words' not in st.session_state:
         st.session_state.selected_words = set()
+    if 'vocab_repo' not in st.session_state:
+        st.session_state.vocab_repo = SQLiteVocabularyRepository()
 
     # Sidebar for settings
     with st.sidebar:
@@ -108,7 +110,7 @@ def main():
         st.session_state.current_task = st.selectbox(
             "Select task:",
             options=list(TASK_OPTIONS.keys()),
-            format_func=lambda x: f"{TASK_OPTIONS[x]}",
+            format_func=lambda x: f"{TASK_OPTIONS[x].display_name}",
             index=list(TASK_OPTIONS.keys()).index(st.session_state.current_task)
         )
 
@@ -117,10 +119,6 @@ def main():
     if getattr(st.session_state, 'current_page', 'chat') == 'vocabulary':
         st.title("My Vocabulary")
         
-        # Initialize vocabulary repository if not exists
-        if 'vocab_repo' not in st.session_state:
-            st.session_state.vocab_repo = SQLiteVocabularyRepository()
-
         # Top panel with buttons
         button_col1, button_col2, button_col3 = st.columns([1, 1, 8])  # Adjust ratio for button spacing
         with button_col1:
@@ -265,17 +263,29 @@ def main():
             # Get bot response
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
-                    response = st.session_state.chat_api.chat(
-                        prompt,
-                        "user123",
-                        learning_language=st.session_state.learning_language,
-                        interface_language=st.session_state.interface_language,
-                        task=st.session_state.current_task
-                    ).content
-                    st.markdown(response)
+                    # Prepare chat parameters
+                    chat_params = {
+                        "query": prompt,
+                        "user_id": "user123",
+                        "learning_language": st.session_state.learning_language,
+                        "interface_language": st.session_state.interface_language,
+                        "task": st.session_state.current_task
+                    }
+                    
+                    # Add vocabulary if the task requires it
+                    task_config = TASK_OPTIONS[st.session_state.current_task]
+                    if task_config.requires_vocabulary:
+                        vocab_entries = st.session_state.vocab_repo.get_vocabulary_for_prompt(
+                            user_id="user123",  # Replace with actual user_id
+                            learning_language=st.session_state.learning_language
+                        )
+                        chat_params["vocabulary"] = vocab_entries
+
+                    response = st.session_state.chat_api.chat(**chat_params)
+                    st.markdown(response.content)
             
             # Add assistant response to chat history
-            st.session_state.messages.append({"role": "assistant", "content": response})
+            st.session_state.messages.append({"role": "assistant", "content": response.content})
 
 if __name__ == "__main__":
     main()

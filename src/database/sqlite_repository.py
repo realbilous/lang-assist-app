@@ -3,6 +3,7 @@ import json
 from typing import List, Optional
 from .vocabulary_repository import VocabularyRepository
 from .models import VocabularyEntry
+from src.models.vocabulary_models import VocabularyEntryOutputModel
 
 class SQLiteVocabularyRepository(VocabularyRepository):
     def __init__(self, db_path: str = "vocabulary.db"):
@@ -68,4 +69,17 @@ class SQLiteVocabularyRepository(VocabularyRepository):
             translation=row[5],
             definitions=json.loads(row[6]),
             example_sentence=row[7]
-        ) 
+        )
+    
+    def get_vocabulary_for_prompt(self, user_id: str, learning_language: str) -> List[VocabularyEntryOutputModel]:
+        entries = self.get_entries(user_id)
+        return [
+            VocabularyEntryOutputModel(
+                word_phrase=entry.word_phrase,
+                translation=entry.translation,
+                definitions=entry.definitions,
+                example=entry.example_sentence
+            )
+            for entry in entries
+            if entry.learning_language == learning_language
+        ] 

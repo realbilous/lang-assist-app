@@ -1,8 +1,8 @@
-from src.models.vocabulary_models import VocabularyAnalysis
+from src.models.vocabulary_models import VocabularyEntryOutputModel
 import json
 from typing import Union
 
-def parse_vocabulary_response(response_content: str) -> Union[VocabularyAnalysis, None]:
+def parse_vocabulary_response(response_content: str) -> Union[VocabularyEntryOutputModel, None]:
     """
     Parse and validate the vocabulary analysis response from the LLM.
     
@@ -10,7 +10,7 @@ def parse_vocabulary_response(response_content: str) -> Union[VocabularyAnalysis
         response_content (str): Raw response content from the LLM
         
     Returns:
-        VocabularyAnalysis: Validated vocabulary analysis object
+        VocabularyEntryOutputModel: Validated vocabulary analysis object
         
     Raises:
         ValueError: If the response cannot be parsed or validated
@@ -20,7 +20,7 @@ def parse_vocabulary_response(response_content: str) -> Union[VocabularyAnalysis
         data = json.loads(response_content)
         
         # Validate and convert to Pydantic model
-        return VocabularyAnalysis(**data)
+        return VocabularyEntryOutputModel(**data)
         
     except json.JSONDecodeError:
         raise ValueError("Failed to parse LLM response as JSON")
