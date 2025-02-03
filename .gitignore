@@ -173,3 +173,4 @@ secrets.py*
 test.ipynb
 
 *.db
+.vscode/

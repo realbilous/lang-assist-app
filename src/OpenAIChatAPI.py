@@ -1,16 +1,18 @@
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import MessagesPlaceholder
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.base import empty_checkpoint
 from langgraph.graph import START, MessagesState, StateGraph
 from langchain_core.messages import trim_messages
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from src.prompts.prompt_templates import PROMPT_TEMPLATES
 
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, RemoveMessage
 from langgraph.graph.message import add_messages
 from typing_extensions import Annotated, TypedDict
 from typing import Sequence, Optional, List
+
 from src.models.vocabulary_models import VocabularyEntryOutputModel
+from src.prompts.prompt_templates import PROMPT_TEMPLATES
 
 from config.secrets import OPENAI_API_KEY
 
@@ -121,3 +123,12 @@ class OpenAIChatAPI:
         output = self.app.invoke(state_dict, config)
         
         return output["messages"][-1]
+    
+
+    def delete_messages(self, user_id: str):
+        config = {"configurable": {"thread_id": user_id}}
+
+        messages = self.app.get_state(config).values.get("messages", [])
+        
+        if messages:          
+            self.app.update_state(config, {"messages": [RemoveMessage(id=message.id) for message in messages]})

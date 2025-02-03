@@ -13,9 +13,8 @@ Showing a flashcard means that you will display the word or phrase in **{learnin
 The user will then have to translate the word or phrase into **{interface_language}**.
 
 After the user has translated the word or phrase, you will display the correct translation in **{interface_language}**.
-After the user has seen the correct translation, you will ask the user if he wants to see the next flashcard.
-If the user indicates that he wants to see the next flashcard, you will show the next flashcard.
-If the user indicates that he does not want to see the next flashcard, you will end the game.
+The cards should be shown in random order. If all cards have been shown, you should start over.
+After each round, assume that the user wants to continue with the next card.If the user indicates that he does not want to see the next flashcard, you will end the game.
 """
 
 RANDOM_WORDS_PROMPT = """
@@ -29,14 +28,14 @@ The game consists of a series of words or phrases in **{learning_language}**. Fo
 3. Wait for the user's translation attempt
 4. Provide the correct translation in **{interface_language}**
 5. Add a brief explanation or usage note if needed
-6. Ask if the user wants to continue with another word
+6. Continue with another word
 
 Keep the difficulty level appropriate for a language learner. Choose words that are:
 - Commonly used in everyday situations
 - Suitable for basic to intermediate learners
 - Useful for practical communication
 
-After each round, wait for the user to indicate if they want to continue or stop the practice.
+After each round, assume that the user wants to continue with the next card.
 """
 
 FILL_IN_BLANK_PROMPT = """

@@ -15,7 +15,7 @@ from src.database.sqlite_repository import SQLiteVocabularyRepository
 from src.utils.vocabulary_utils import parse_vocabulary_response
 
 def create_vocabulary_table():
-    entries = st.session_state.vocab_repo.get_entries("user123")
+    entries = st.session_state.vocab_repo.get_entries(st.session_state.user_id)
     if entries:
         table_data = []
         # Create table data without direct checkbox widgets
@@ -73,6 +73,8 @@ def main():
         st.session_state.selected_words = set()
     if 'vocab_repo' not in st.session_state:
         st.session_state.vocab_repo = SQLiteVocabularyRepository()
+    if 'user_id' not in st.session_state:
+        st.session_state.user_id = "user123"  # Default user ID
 
     # Sidebar for settings
     with st.sidebar:
@@ -107,13 +109,43 @@ def main():
         
         # Task selector below language settings
         st.title("Task Settings")
+        
+        # Store previous task before selection
+        if 'previous_task' not in st.session_state:
+            st.session_state.previous_task = st.session_state.current_task
+            
+        # Update task selection
         st.session_state.current_task = st.selectbox(
             "Select task:",
             options=list(TASK_OPTIONS.keys()),
             format_func=lambda x: f"{TASK_OPTIONS[x].display_name}",
-            index=list(TASK_OPTIONS.keys()).index(st.session_state.current_task)
+            index=list(TASK_OPTIONS.keys()).index(st.session_state.current_task),
+            key="task_selector"
         )
+        
+        # Check if task has changed and has instructions
+        if st.session_state.previous_task != st.session_state.current_task:
+            # Use the dynamic user_id instead of hardcoded value
+            st.session_state.chat_api.delete_messages(st.session_state.user_id)
 
+            task_config = TASK_OPTIONS[st.session_state.current_task]
+            if task_config.instructions:
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": task_config.instructions
+                })
+            
+            st.session_state.previous_task = st.session_state.current_task
+            st.rerun()
+
+        
+        st.title("User Settings")
+        # Add user ID input at the bottom of sidebar
+        st.session_state.user_id = st.text_input(
+            "User ID:",
+            value=st.session_state.user_id,
+            help="Enter your user ID"
+        )
 
     # Main interface
     if getattr(st.session_state, 'current_page', 'chat') == 'vocabulary':
@@ -136,7 +168,7 @@ def main():
                             # TODO: Improve deletion performance, so that it's not necessary to iterate over all entries. Use unique record ids instead.
                             for word in st.session_state.selected_words:
                                 # Find and delete each selected entry
-                                entries = st.session_state.vocab_repo.get_entries("user123")
+                                entries = st.session_state.vocab_repo.get_entries(st.session_state.user_id)
                                 for entry in entries:
                                     if entry.word_phrase == word:
                                         st.session_state.vocab_repo.delete_entry(entry.entry_id)
@@ -214,7 +246,7 @@ def main():
                     if submit and word_phrase and translation:
                         entry = VocabularyEntry(
                             entry_id=0,
-                            user_id="user123",
+                            user_id=st.session_state.user_id,
                             learning_language=st.session_state.learning_language,
                             interface_language=st.session_state.interface_language,
                             word_phrase=word_phrase,
@@ -266,7 +298,7 @@ def main():
                     # Prepare chat parameters
                     chat_params = {
                         "query": prompt,
-                        "user_id": "user123",
+                        "user_id": st.session_state.user_id,  # Use dynamic user_id
                         "learning_language": st.session_state.learning_language,
                         "interface_language": st.session_state.interface_language,
                         "task": st.session_state.current_task
@@ -276,7 +308,7 @@ def main():
                     task_config = TASK_OPTIONS[st.session_state.current_task]
                     if task_config.requires_vocabulary:
                         vocab_entries = st.session_state.vocab_repo.get_vocabulary_for_prompt(
-                            user_id="user123",  # Replace with actual user_id
+                            user_id=st.session_state.user_id,  # Use dynamic user_id
                             learning_language=st.session_state.learning_language
                         )
                         chat_params["vocabulary"] = vocab_entries
