@@ -16,6 +16,8 @@ from src.prompts.prompt_templates import PROMPT_TEMPLATES
 
 from config.secrets import OPENAI_API_KEY
 
+import logging
+
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
     learning_language: str
@@ -38,12 +40,18 @@ class OpenAIChatAPI:
             model (str): The OpenAI model to use (e.g., "gpt-4", "gpt-3.5-turbo")
             temperature (float): Controls the randomness of responses (0.0 to 1.0)
         """
-        self.workflow = StateGraph(state_schema=State)
-        self.chat_model = ChatOpenAI(
-            model=model, 
-            temperature=temperature,
-            api_key=OPENAI_API_KEY
-        )
+        self.logger = logging.getLogger(__name__)
+        
+        try:
+            self.workflow = StateGraph(state_schema=State)
+            self.chat_model = ChatOpenAI(
+                model=model, 
+                temperature=temperature,
+                api_key=OPENAI_API_KEY
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to initialize chat model: {str(e)}")
+            raise
         
         self.prompt_templates = PROMPT_TEMPLATES
         
@@ -108,21 +116,25 @@ class OpenAIChatAPI:
         Returns:
             BaseMessage: The model's response
         """
-        config = {"configurable": {"thread_id": user_id}}
-        
-        state_dict = {
-            "messages": [HumanMessage(content=query)],
-            "learning_language": learning_language,
-            "interface_language": interface_language,
-            "task": task
-        }
-        
-        if vocabulary is not None:
-            state_dict["vocabulary"] = vocabulary
-        
-        output = self.app.invoke(state_dict, config)
-        
-        return output["messages"][-1]
+        try:
+            config = {"configurable": {"thread_id": user_id}}
+            
+            state_dict = {
+                "messages": [HumanMessage(content=query)],
+                "learning_language": learning_language,
+                "interface_language": interface_language,
+                "task": task
+            }
+            
+            if vocabulary is not None:
+                state_dict["vocabulary"] = vocabulary
+            
+            output = self.app.invoke(state_dict, config)
+            
+            return output["messages"][-1]
+        except Exception as e:
+            self.logger.error(f"Unexpected error during chat: {str(e)}")
+            raise
     
 
     def delete_messages(self, user_id: str):

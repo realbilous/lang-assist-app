@@ -6,13 +6,11 @@ from config.config import (
     INTERFACE_LANGUAGES, 
     LEARNING_LANGUAGES, 
     TASK_OPTIONS,
-    DEFAULT_INTERFACE_LANGUAGE,
-    DEFAULT_LEARNING_LANGUAGE,
-    DEFAULT_CURRENT_TASK
 )
 from src.database.models import VocabularyEntry
 from src.database.sqlite_repository import SQLiteVocabularyRepository
 from src.utils.vocabulary_utils import parse_vocabulary_response
+from src.dependencies import Dependencies
 
 def create_vocabulary_table():
     entries = st.session_state.vocab_repo.get_entries(st.session_state.user_id)
@@ -58,23 +56,23 @@ def create_vocabulary_table():
 def main():
     st.set_page_config(page_title="Language Learning Assistant", layout="wide")
     
-    # Initialize session state variables with defaults
+    # Initialize session state variables with dependencies
     if 'chat_api' not in st.session_state:
-        st.session_state.chat_api = OpenAIChatAPI()
+        st.session_state.chat_api = Dependencies.get_chat_api()
     if 'messages' not in st.session_state:
         st.session_state.messages = []
     if 'interface_language' not in st.session_state:
-        st.session_state.interface_language = DEFAULT_INTERFACE_LANGUAGE
+        st.session_state.interface_language = Dependencies.get_default_interface_language()
     if 'learning_language' not in st.session_state:
-        st.session_state.learning_language = DEFAULT_LEARNING_LANGUAGE
+        st.session_state.learning_language = Dependencies.get_default_learning_language()
     if 'current_task' not in st.session_state:
-        st.session_state.current_task = DEFAULT_CURRENT_TASK
+        st.session_state.current_task = Dependencies.get_default_task()
     if 'selected_words' not in st.session_state:
         st.session_state.selected_words = set()
     if 'vocab_repo' not in st.session_state:
-        st.session_state.vocab_repo = SQLiteVocabularyRepository()
+        st.session_state.vocab_repo = Dependencies.get_vocabulary_repository()
     if 'user_id' not in st.session_state:
-        st.session_state.user_id = "user123"  # Default user ID
+        st.session_state.user_id = Dependencies.get_default_user_id()
 
     # Sidebar for settings
     with st.sidebar:

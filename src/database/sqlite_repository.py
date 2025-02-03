@@ -1,13 +1,17 @@
 import sqlite3
 import json
-from typing import List, Optional
+from typing import List, Optional, Generator
 from .vocabulary_repository import VocabularyRepository
 from .models import VocabularyEntry
 from src.models.vocabulary_models import VocabularyEntryOutputModel
+from contextlib import contextmanager
+from config.database_config import DatabaseConfig
+import logging
 
 class SQLiteVocabularyRepository(VocabularyRepository):
-    def __init__(self, db_path: str = "vocabulary.db"):
+    def __init__(self, db_path: str = DatabaseConfig.DEFAULT_DB_PATH):
         self.db_path = db_path
+        self.logger = logging.getLogger(__name__)
         self._init_db()
     
     def _init_db(self):
@@ -25,39 +29,75 @@ class SQLiteVocabularyRepository(VocabularyRepository):
                 )
             """)
     
+    @contextmanager
+    def _get_connection(self) -> Generator[sqlite3.Connection, None, None]:
+        """Context manager for database connections"""
+        conn = sqlite3.connect(
+            self.db_path,
+            timeout=DatabaseConfig.SQLITE_TIMEOUT,
+            isolation_level=DatabaseConfig.SQLITE_ISOLATION_LEVEL
+        )
+        try:
+            yield conn
+        except sqlite3.Error as e:
+            self.logger.error(f"Database error: {str(e)}")
+            raise
+        finally:
+            conn.close()
+
     def add_entry(self, entry: VocabularyEntry) -> int:
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO vocabulary (
-                    user_id, learning_language, interface_language,
-                    word_phrase, translation, definitions, example_sentence
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                entry.user_id, entry.learning_language, entry.interface_language,
-                entry.word_phrase, entry.translation, json.dumps(entry.definitions),
-                entry.example_sentence
-            ))
-            return cursor.lastrowid
+            try:
+                cursor.execute("""
+                    INSERT INTO vocabulary (
+                        user_id, learning_language, interface_language,
+                        word_phrase, translation, definitions, example_sentence
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    entry.user_id, entry.learning_language, entry.interface_language,
+                    entry.word_phrase, entry.translation, json.dumps(entry.definitions),
+                    entry.example_sentence
+                ))
+                conn.commit()
+                return cursor.lastrowid
+            except sqlite3.Error as e:
+                conn.rollback()
+                self.logger.error(f"Error adding entry: {str(e)}")
+                raise
     
     def get_entries(self, user_id: str) -> List[VocabularyEntry]:
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM vocabulary WHERE user_id = ?", (user_id,))
-            return [self._row_to_entry(row) for row in cursor.fetchall()]
+        with self._get_connection() as conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM vocabulary WHERE user_id = ?", (user_id,))
+                return [self._row_to_entry(row) for row in cursor.fetchall()]
+            except sqlite3.Error as e:
+                self.logger.error(f"Error getting entries: {str(e)}")
+                raise
     
     def get_entry(self, entry_id: int) -> Optional[VocabularyEntry]:
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM vocabulary WHERE entry_id = ?", (entry_id,))
-            row = cursor.fetchone()
-            return self._row_to_entry(row) if row else None
+        with self._get_connection() as conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM vocabulary WHERE entry_id = ?", (entry_id,))
+                row = cursor.fetchone()
+                return self._row_to_entry(row) if row else None
+            except sqlite3.Error as e:
+                self.logger.error(f"Error getting entry: {str(e)}")
+                raise
     
     def delete_entry(self, entry_id: int) -> bool:
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM vocabulary WHERE entry_id = ?", (entry_id,))
-            return cursor.rowcount > 0
+        with self._get_connection() as conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM vocabulary WHERE entry_id = ?", (entry_id,))
+                conn.commit()
+                return cursor.rowcount > 0
+            except sqlite3.Error as e:
+                conn.rollback()
+                self.logger.error(f"Error deleting entry: {str(e)}")
+                raise
     
     def _row_to_entry(self, row) -> VocabularyEntry:
         return VocabularyEntry(
