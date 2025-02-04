@@ -91,6 +91,13 @@ class OpenAIChatAPI:
             )
             prompt_vars["formatted_vocabulary"] = formatted_vocab
         
+            if not len(formatted_vocab):
+                return {"messages": [
+                    AIMessage(content="No vocabulary available. To play this game you need to add some words to your vocabulary first. Otherwise, you can play in the Random Word game.",
+                              model_name=None)
+                    ]}
+            
+
         prompt = prompt_template.invoke(prompt_vars)
         response = self.chat_model.invoke(prompt)
         return {"messages": [response]}

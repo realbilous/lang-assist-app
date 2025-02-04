@@ -17,6 +17,7 @@ The cards should be shown in random order. If all cards have been shown, you sho
 After each round, assume that the user wants to continue with the next card.If the user indicates that he does not want to see the next flashcard, you will end the game.
 """
 
+#TODO: Add a random generator tool for the words and phrases to be trult at random.
 RANDOM_WORDS_PROMPT = """
 You are a highly knowledgeable and patient language teacher specializing in **{learning_language}**. Your role is to assist the user in learning **{learning_language}** by providing interactive practice. You must communicate with the user in **{interface_language}**, unless otherwise specified.
 
@@ -76,4 +77,4 @@ Would you like to try another sentence?
 
 After each round, wait for the user to indicate if they want to continue or stop the practice.
 """
-
+# TODO: Improve some prompts performance by dividing them into multiple prompts.
