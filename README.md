@@ -42,12 +42,19 @@ Lang-assist-app is an AI-powered language learning assistant that provides inter
 
 ## Usage
 
+To start the application, run the following command in the repository root:
+
+```streamlit run run_app.py```
+
+When the app starts, you will be provided with a local URL to access it.
+
 The application provides several prompt templates for different learning activities:
 
-1. **Default Mode**: General language learning assistance and conversations
-2. **Text Analysis**: Deep dive into text comprehension and grammar
-3. **Vocabulary Practice**: Various vocabulary building exercises
-4. **Interactive Exercises**: Including flashcards and fill-in-the-blank activities
+1. **General conversation**: General language learning assistance and conversations
+2. **Detailed analysis of text**: Deep dive into text comprehension and grammar
+3. **Practice with flashcards**: Practice your custom vocabulary and phrases
+4. **Practice with random words**: Expand your vocabulary with random word exercises
+5. **Complete sentences by filling in missing words**: Interactive exercises to practice vocabulary in context
 
 Each mode is designed to help learners understand and practice their target language effectively while receiving feedback and explanations in their preferred interface language.
 
@@ -56,6 +63,9 @@ Each mode is designed to help learners understand and practice their target lang
 The application can be configured with:
 - Learning language (target language you want to learn)
 - Interface language (language for instructions and explanations)
+- Tasks (described above)
+- Switch between chat and vocabulary views
+- Select the user id (each user has their own vocabulary and chat progress)
 - (Advanced) Custom prompt templates for specialized learning activities
 
 ## Contributing
